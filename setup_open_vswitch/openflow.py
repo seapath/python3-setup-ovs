@@ -15,7 +15,9 @@ class SetupOpenFlow:
         SetupOpenFlow constructor
         :param config: the configuration which describes the OVS setup
         """
-        for bridge in config:
+        if "bridges" not in config:
+            return
+        for bridge in config["bridges"]:
             self.configure_bridge_flow(bridge)
 
     @classmethod

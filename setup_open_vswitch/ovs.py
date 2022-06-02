@@ -15,7 +15,10 @@ def setup_ovs(config):
     dpdk_interfaces = []
     dpdk_bridges = []
     logging.info("Applying configuration...")
-    for bridge in config:
+    if "bridges" not in config or config["bridges"] == []:
+        logging.info("There are no bridges")
+        return
+    for bridge in config["bridges"]:
         if "ports" in bridge:
             for port in bridge["ports"]:
                 if port["type"] == "dpdk":
@@ -57,7 +60,7 @@ def setup_ovs(config):
             "other_config:dpdk-init=false",
         )
     _bind_dpdk_interfaces(dpdk_interfaces)
-    _create_bridges(config, dpdk_bridges)
+    _create_bridges(config["bridges"], dpdk_bridges)
 
     logging.info("Applying configuration: done")
 
@@ -327,3 +330,27 @@ def _create_bridges(config, dpdk_bridges):
                     helpers.run_command(
                         "/sbin/ip", "link", "set", port_name, "up"
                     )
+
+
+def unbind_pci(config):
+    if "unbind_pci_address" in config:
+        for address in config["unbind_pci_address"]:
+            if not os.path.exists(f"/sys/bus/pci/devices/{address}"):
+                logging.warning(f"address {address} not found")
+                continue
+            if not os.path.exists(f"/sys/bus/pci/devices/{address}/driver"):
+                logging.info(f"no driver to bind for {address}, skipping")
+                continue
+            driver_name = os.readlink(
+                f"/sys/bus/pci/devices/{address}/driver"
+            ).split("/")[-1]
+            if driver_name == "vfio_pci":
+                logging.info(
+                    f"{address} is already bound to vfio_pci, skipping"
+                )
+                continue
+            driver_unbind_path = os.path.join(
+                "/sys/bus/pci/drivers", driver_name, "unbind"
+            )
+            with open(driver_unbind_path, "w") as f:
+                f.write(address)

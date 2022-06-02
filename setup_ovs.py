@@ -71,6 +71,12 @@ if __name__ == "__main__":
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--no-unbind",
+        help="Do not unbind PCI devices",
+        action="store_true",
+        required=False,
+    )
     args = parser.parse_args()
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -101,6 +107,8 @@ if __name__ == "__main__":
             ovs.clear_ovs()
         if not args.no_remove_interfaces:
             ovs.clear_tap()
+        if not args.no_unbind:
+            ovs.unbind_pci(config)
         if not args.no_ovs:
             ovs.setup_ovs(config)
         if not args.no_openflow:
