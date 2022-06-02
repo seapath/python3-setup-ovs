@@ -28,49 +28,68 @@ def configuration_check(config):
     :param config: The configuration which describes the OVS setup
     """
     logging.info("Checking configuration")
-    if type(config) != list:
+    if type(config) != dict:
         raise SetupOVSConfigException(
-            "The configuration should be a bridge list"
+            "The configuration should be a dictionary"
         )
-    for bridge in config:
-        if type(bridge) != dict:
-            raise SetupOVSConfigException("A bridge must be a dictionary")
-        if "name" not in bridge:
-            raise SetupOVSConfigException("Bridge without name attribute")
-        logging.debug("Checking: " + bridge["name"])
-        if "ports" in bridge:
-            if type(bridge["ports"]) != list:
-                raise SetupOVSConfigException("ports must be a list")
-            for port in bridge["ports"]:
-                if type(port) != dict:
-                    raise SetupOVSConfigException(
-                        "A port must be a dictionary"
-                    )
-                _check_port_configuration(bridge["name"], port)
-        if "other_config" in bridge:
-            attribute_value = (
-                [bridge["other_config"]]
-                if type(bridge["other_config"]) == str
-                else bridge["other_config"]
+    if "bridges" in config:
+        if type(config["bridges"]) != list:
+            raise SetupOVSConfigException(
+                "bridges configuration should be a list"
             )
-            if type(attribute_value) != list:
-                raise SetupOVSConfigException(
-                    "Bridge {}: other_config must be an string or a "
-                    "strings list".format(bridge["name"])
+        for bridge in config["bridges"]:
+            if type(bridge) != dict:
+                raise SetupOVSConfigException("A bridge must be a dictionary")
+            if "name" not in bridge:
+                raise SetupOVSConfigException("Bridge without name attribute")
+            logging.debug("Checking: " + bridge["name"])
+            if "ports" in bridge:
+                if type(bridge["ports"]) != list:
+                    raise SetupOVSConfigException("ports must be a list")
+                for port in bridge["ports"]:
+                    if type(port) != dict:
+                        raise SetupOVSConfigException(
+                            "A port must be a dictionary"
+                        )
+                    _check_port_configuration(bridge["name"], port)
+            if "other_config" in bridge:
+                attribute_value = (
+                    [bridge["other_config"]]
+                    if type(bridge["other_config"]) == str
+                    else bridge["other_config"]
                 )
-            for element in attribute_value:
-                if type(element) != str:
+                if type(attribute_value) != list:
                     raise SetupOVSConfigException(
                         "Bridge {}: other_config must be an string or a "
                         "strings list".format(bridge["name"])
                     )
-        for attribute in ("rstp_enable", "enable_ipv6"):
-            if attribute in bridge and type(bridge[attribute]) != bool:
-                raise SetupOVSConfigException(
-                    "Bridge {}: {} must be a boolean".format(
-                        bridge["name"], attribute
+                for element in attribute_value:
+                    if type(element) != str:
+                        raise SetupOVSConfigException(
+                            "Bridge {}: other_config must be an string or a "
+                            "strings list".format(bridge["name"])
+                        )
+            for attribute in ("rstp_enable", "enable_ipv6"):
+                if attribute in bridge and type(bridge[attribute]) != bool:
+                    raise SetupOVSConfigException(
+                        "Bridge {}: {} must be a boolean".format(
+                            bridge["name"], attribute
+                        )
                     )
+    if "unbind_pci_address" in config:
+        if type(config["unbind_pci_address"]) != list:
+            raise SetupOVSConfigException(
+                "unbind_pci_address should be a PCI addresses list"
+            )
+
+        for pci_address in config["unbind_pci_address"]:
+            if type(pci_address) != str:
+                raise SetupOVSConfigException("A pci_address must be a string")
+            if not helpers.KERNEL_PCI_ADDRESS_MATCHER.match(pci_address):
+                raise SetupOVSConfigException(
+                    f"{pci_address} is not a PCI address"
                 )
+
     logging.info("Configuration check: OK")
 
 
