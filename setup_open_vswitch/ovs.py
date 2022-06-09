@@ -335,14 +335,28 @@ def _create_bridges(config, dpdk_bridges):
 def unbind_pci(config):
     if "unbind_pci_address" in config:
         for address in config["unbind_pci_address"]:
-            if not os.path.exists(f"/sys/bus/pci/devices/{address}"):
+            match = helpers.PCI_ADDRESS_MATCHER.match(address)
+            # Convert PCI address to sysfs format
+            match_group = match.groupdict()
+            nic_address_part1 = int(match_group["part1"], 16)
+            nic_address_part2 = int(match_group["part2"], 16)
+            nic_address_part3 = int(match_group["part3"], 16)
+            sysfs_pci_address = (
+                "0000:"
+                f"{nic_address_part1:02x}:"
+                f"{nic_address_part2:02x}."
+                f"{nic_address_part3:01x}"
+            )
+            if not os.path.exists(f"/sys/bus/pci/devices/{sysfs_pci_address}"):
                 logging.warning(f"address {address} not found")
                 continue
-            if not os.path.exists(f"/sys/bus/pci/devices/{address}/driver"):
+            if not os.path.exists(
+                f"/sys/bus/pci/devices/{sysfs_pci_address}/driver"
+            ):
                 logging.info(f"no driver to bind for {address}, skipping")
                 continue
             driver_name = os.readlink(
-                f"/sys/bus/pci/devices/{address}/driver"
+                f"/sys/bus/pci/devices/{sysfs_pci_address}/driver"
             ).split("/")[-1]
             if driver_name == "vfio_pci":
                 logging.info(
@@ -353,4 +367,4 @@ def unbind_pci(config):
                 "/sys/bus/pci/drivers", driver_name, "unbind"
             )
             with open(driver_unbind_path, "w") as f:
-                f.write(address)
+                f.write(sysfs_pci_address)

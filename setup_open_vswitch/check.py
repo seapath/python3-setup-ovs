@@ -85,7 +85,7 @@ def configuration_check(config):
         for pci_address in config["unbind_pci_address"]:
             if type(pci_address) != str:
                 raise SetupOVSConfigException("A pci_address must be a string")
-            if not helpers.KERNEL_PCI_ADDRESS_MATCHER.match(pci_address):
+            if not helpers.PCI_ADDRESS_MATCHER.match(pci_address):
                 raise SetupOVSConfigException(
                     f"{pci_address} is not a PCI address"
                 )
