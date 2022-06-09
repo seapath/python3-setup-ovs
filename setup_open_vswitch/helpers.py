@@ -10,8 +10,6 @@ PCI_ADDRESS_MATCHER = re.compile(
     r"(?P<part3>[0-9a-f]))$"
 )
 
-KERNEL_PCI_ADDRESS_MATCHER = re.compile(r"[0-9]{4}:[0-9]{2}:[0-9]{2}\.[0-9]")
-
 IPv4_ADDRESS_MATCHER = re.compile(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$")
 
 MAC_ADDRESS_MATCHER = re.compile(r"^([0-9a-f][0-9a-f]:){5}([0-9a-f][0-9a-f])$")
