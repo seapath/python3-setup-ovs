@@ -144,30 +144,6 @@ def _create_bridges(config, dpdk_bridges):
         else:
             logging.info("Create the bridge: " + bridge_name)
             helpers.run_command("/usr/bin/ovs-vsctl", "add-br", bridge_name)
-        if "rstp_enable" in bridge and bridge["rstp_enable"]:
-            logging.info("Enabling rstp_enable on bridge: " + bridge_name)
-            helpers.run_command(
-                "/usr/bin/ovs-vsctl",
-                "set",
-                "Bridge",
-                bridge_name,
-                "rstp_enable=true",
-            )
-        if "other_config" in bridge:
-            logging.info("Applying other_config on bridge: " + bridge_name)
-            other_configs = (
-                [bridge["other_config"]]
-                if type(bridge["other_config"]) == str
-                else bridge["other_config"]
-            )
-            for other_config in other_configs:
-                helpers.run_command(
-                    "/usr/bin/ovs-vsctl",
-                    "set",
-                    "Bridge",
-                    bridge_name,
-                    "other_config=" + other_config,
-                )
 
         if "ports" in bridge:
             for port in bridge["ports"]:
@@ -331,6 +307,30 @@ def _create_bridges(config, dpdk_bridges):
                         "/sbin/ip", "link", "set", port_name, "up"
                     )
 
+        if "rstp_enable" in bridge and bridge["rstp_enable"]:
+            logging.info("Enabling rstp_enable on bridge: " + bridge_name)
+            helpers.run_command(
+                "/usr/bin/ovs-vsctl",
+                "set",
+                "Bridge",
+                bridge_name,
+                "rstp_enable=true",
+            )
+        if "other_config" in bridge:
+            logging.info("Applying other_config on bridge: " + bridge_name)
+            other_configs = (
+                [bridge["other_config"]]
+                if type(bridge["other_config"]) == str
+                else bridge["other_config"]
+            )
+            for other_config in other_configs:
+                helpers.run_command(
+                    "/usr/bin/ovs-vsctl",
+                    "set",
+                    "Bridge",
+                    bridge_name,
+                    "other_config=" + other_config,
+                )
 
 def unbind_pci(config):
     if "unbind_pci_address" in config:
