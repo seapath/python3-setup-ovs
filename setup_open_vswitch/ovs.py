@@ -65,6 +65,31 @@ def setup_ovs(config):
     logging.info("Applying configuration: done")
 
 
+def get_list_ports():
+    list_br = []
+    list_ports = []
+    if not helpers.dry_run:
+        raw_list_br = helpers.run_command(
+            "/usr/bin/ovs-vsctl", "list-br", capture_output=True
+        )
+        list_br = (
+            raw_list_br.stdout.decode("UTF-8").split("\n")
+            if raw_list_br.stdout
+            else []
+        )
+    for bridge in list_br:
+        if bridge:
+            raw_list_ports = helpers.run_command(
+                "/usr/bin/ovs-vsctl", "list-ports", bridge, capture_output=True
+            )
+            list_ports_to_add = (
+                raw_list_ports.stdout.decode("UTF-8").split("\n")
+                if raw_list_ports.stdout
+                else []
+            )
+            list_br.extend(list_ports_to_add)
+    return list_ports
+
 def clear_ovs():
     """
     Remove all OVS bridges
@@ -92,10 +117,12 @@ def clear_tap():
         To avoid errors stop all the VMs and call clear_ovs() before.
     """
 
+    list_ports = get_list_ports()
+
     for interface in os.listdir("/sys/class/net"):
         if os.path.isfile(
             os.path.join("/sys/class/net", interface, "tun_flags")
-        ):
+        ) and (interface in list_ports):
             helpers.run_command(
                 "/sbin/ip",
                 "tuntap",
