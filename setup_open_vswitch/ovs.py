@@ -86,7 +86,7 @@ def get_list_ports():
                 if raw_list_ports.stdout
                 else []
             )
-            list_br.extend(list_ports_to_add)
+            list_ports.extend(list_ports_to_add)
     return list_ports
 
 def clear_ovs():
