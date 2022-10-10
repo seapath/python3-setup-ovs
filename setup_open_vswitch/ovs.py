@@ -64,7 +64,6 @@ def setup_ovs(config):
 
     logging.info("Applying configuration: done")
 
-
 def get_list_ports():
     list_br = []
     list_ports = []
@@ -94,6 +93,7 @@ def clear_ovs():
     """
     Remove all OVS bridges
     """
+    list_br_save = get_list_ports()
     list_br = []
     if not helpers.dry_run:
         raw_list_br = helpers.run_command(
@@ -107,9 +107,9 @@ def clear_ovs():
     for bridge in list_br:
         if bridge:
             helpers.run_command("/usr/bin/ovs-vsctl", "del-br", bridge)
+    return list_br_save
 
-
-def clear_tap():
+def clear_tap(list_br_save):
     """
     Remove all tap interfaces.
     Warnings:
@@ -117,7 +117,7 @@ def clear_tap():
         To avoid errors stop all the VMs and call clear_ovs() before.
     """
 
-    list_ports = get_list_ports()
+    list_ports = list_br_save
 
     for interface in os.listdir("/sys/class/net"):
         if os.path.isfile(

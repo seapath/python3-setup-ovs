@@ -104,9 +104,9 @@ if __name__ == "__main__":
     if not args.check:
         check.system_check()
         if not args.no_remove_bridges:
-            ovs.clear_ovs()
+            list_br_save = ovs.clear_ovs()
         if not args.no_remove_interfaces:
-            ovs.clear_tap()
+            ovs.clear_tap(list_br_save)
         if not args.no_unbind:
             ovs.unbind_pci(config)
         if not args.no_ovs:
