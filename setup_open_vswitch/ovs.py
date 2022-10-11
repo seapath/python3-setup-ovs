@@ -65,10 +65,11 @@ def setup_ovs(config):
     logging.info("Applying configuration: done")
 
 
-def clear_ovs():
+def clear_ovs(config):
     """
-    Remove all OVS bridges
+    Remove all OVS bridges except the ones listed in the configuration object "ignored_bridges"
     """
+
     list_br = []
     if not helpers.dry_run:
         raw_list_br = helpers.run_command(
@@ -79,6 +80,9 @@ def clear_ovs():
             if raw_list_br.stdout
             else []
         )
+        if "ignored_bridges" in config and config["ignored_bridges"] != []:
+            for ignored_bridge in config["ignored_bridges"]:
+                list_br.remove(ignored_bridge)
     for bridge in list_br:
         if bridge:
             helpers.run_command("/usr/bin/ovs-vsctl", "del-br", bridge)
