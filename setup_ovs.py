@@ -104,7 +104,7 @@ if __name__ == "__main__":
     if not args.check:
         check.system_check()
         if not args.no_remove_bridges:
-            ovs.clear_ovs()
+            ovs.clear_ovs(config)
         if not args.no_remove_interfaces:
             ovs.clear_tap()
         if not args.no_unbind:
