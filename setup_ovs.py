@@ -8,6 +8,7 @@ import json
 import os
 import yaml
 import pathlib
+import sys
 
 from setup_open_vswitch import helpers
 from setup_open_vswitch import openflow
@@ -100,6 +101,8 @@ if __name__ == "__main__":
     else:
         config = []
         logging.warning(f"Configuration file {args.file} not found ")
+        sys.exit()
+
     check.configuration_check(config)
     if not args.check:
         check.system_check()
