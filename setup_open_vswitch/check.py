@@ -192,7 +192,7 @@ def _check_port_configuration(bridge_name, port):
         if "interface" not in port:
             raise SetupOVSConfigException(
                 "Bridge {} Port {}: attribute interface is required with "
-                "type {}}".format(bridge_name, port_name, port_type)
+                "type {}".format(bridge_name, port_name, port_type)
             )
         interface = port["interface"]
         if port_type == "dpdk":
