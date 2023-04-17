@@ -264,14 +264,15 @@ def _check_port_configuration(bridge_name, port):
                 "Bridge {} Port {}: attribute interface is ignored when "
                 " type is not system nor dpdk".format(bridge_name, port_name)
             )
-    for attribute in ("key", "remote_ip", "remote_port"):
+    for attribute in ("key", "remote_ip", "remote_port", "local_ip"):
         if attribute in port:
             if port["type"] == "vxlan":
-                if attribute != "remote_port" and attribute not in port:
-                    raise SetupOVSConfigException(
-                        "Bridge {} Port {}: {} must be set if type is "
-                        "vxlan".format(bridge_name, port_name, attribute)
-                    )
+                if attribute != "remote_port" and attribute !="local_ip":
+                    if attribute not in port:
+                        raise SetupOVSConfigException(
+                            "Bridge {} Port {}: {} must be set if type is "
+                            "vxlan".format(bridge_name, port_name, attribute)
+                        )
             else:
                 logging.warning(
                     "Bridge {} Port {}: attribute {} is ignored"

@@ -234,6 +234,10 @@ def _create_bridges(config, dpdk_bridges):
                         cmd_args.append(
                             "options:remote_port=" + port["remote_port"]
                         )
+                    if "local_ip" in port:
+                        cmd_args.append(
+                            "options:local_ip=" + port["local_ip"]
+                        )
 
                 if "external-ids" in port:
                     external_ids = (
