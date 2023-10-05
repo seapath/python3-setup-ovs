@@ -109,7 +109,7 @@ if __name__ == "__main__":
         if not args.no_remove_bridges:
             ovs.clear_ovs(config)
         if not args.no_remove_interfaces:
-            ovs.clear_tap()
+            ovs.clear_tap(config)
         if not args.no_unbind:
             ovs.unbind_pci(config)
         if not args.no_ovs:

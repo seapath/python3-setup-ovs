@@ -82,13 +82,14 @@ def clear_ovs(config):
         )
         if "ignored_bridges" in config and config["ignored_bridges"] != []:
             for ignored_bridge in config["ignored_bridges"]:
-                list_br.remove(ignored_bridge)
+                if ignored_bridge in list_br:
+                    list_br.remove(ignored_bridge)
     for bridge in list_br:
         if bridge:
             helpers.run_command("/usr/bin/ovs-vsctl", "del-br", bridge)
 
 
-def clear_tap():
+def clear_tap(config):
     """
     Remove all tap interfaces.
     Warnings:
@@ -96,8 +97,12 @@ def clear_tap():
         To avoid errors stop all the VMs and call clear_ovs() before.
     """
 
+    ignored_taps = []
+    if "ignored_taps" in config and config["ignored_taps"] != []:
+        ignored_taps = config["ignored_taps"]
+
     for interface in os.listdir("/sys/class/net"):
-        if os.path.isfile(
+        if interface not in ignored_taps and os.path.isfile(
             os.path.join("/sys/class/net", interface, "tun_flags")
         ):
             helpers.run_command(
@@ -109,7 +114,6 @@ def clear_tap():
                 "name",
                 interface,
             )
-
 
 def _bind_dpdk_interfaces(dpdk_interfaces):
     """
@@ -238,7 +242,7 @@ def _create_bridges(config, dpdk_bridges):
                 if "external-ids" in port:
                     external_ids = (
                         [port["external-ids"]]
-                        if type(port["external-ids"]) == str
+                        if isinstance(port["external-ids"],str)
                         else port["external-ids"]
                     )
                     for external_id in external_ids:
@@ -257,7 +261,7 @@ def _create_bridges(config, dpdk_bridges):
                     )
                     other_configs = (
                         [port["other_config"]]
-                        if type(port["other_config"]) == str
+                        if isinstance(port["other_config"],str)
                         else port["other_config"]
                     )
                     for other_config in other_configs:
@@ -324,7 +328,7 @@ def _create_bridges(config, dpdk_bridges):
             logging.info("Applying other_config on bridge: " + bridge_name)
             other_configs = (
                 [bridge["other_config"]]
-                if type(bridge["other_config"]) == str
+                if isinstance(bridge["other_config"],str)
                 else bridge["other_config"]
             )
             for other_config in other_configs:
