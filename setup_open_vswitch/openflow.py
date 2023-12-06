@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import tempfile
 from . import helpers
 
 
@@ -52,6 +53,12 @@ class SetupOpenFlow:
             cls.add_flow(bridge_name, 1, 1, ipv6_action, "ipv6")
             # Default rules we allow everything
             cls.add_flow(bridge_name, 0, 0, "normal", "")
+        if "flows_override" in bridge and bridge["flows_override"]:
+            with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_file:
+                temp_file.write(bridge["flows_override"])
+                temp_file_path = temp_file.name
+                temp_file.seek(0)
+                helpers.run_command("ovs-ofctl", "--bundle", "replace-flows", bridge_name, temp_file_path)
 
     @classmethod
     def configure_port_flow(cls, bridge_name, port):
