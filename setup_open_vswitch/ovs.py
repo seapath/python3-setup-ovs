@@ -339,6 +339,18 @@ def _create_bridges(config, dpdk_bridges):
                     bridge_name,
                     "other_config=" + other_config,
                 )
+        if "ovsvsctl_extra_cmds" in bridge:
+            logging.info("Applying ovs-vsctl extra cmds for bridge: " + bridge_name)
+            ovsvsctl_extra_cmds = (
+                [bridge["ovsvsctl_extra_cmds"]]
+                if isinstance(bridge["ovsvsctl_extra_cmds"],str)
+                else bridge["ovsvsctl_extra_cmds"]
+            )
+            for ovsvsctl_extra_cmd in ovsvsctl_extra_cmds:
+                cmdlist = ["/usr/bin/ovs-vsctl"] + ovsvsctl_extra_cmd.split(" ")
+                helpers.run_command(
+                    *cmdlist
+                )
 
 def unbind_pci(config):
     if "unbind_pci_address" in config:
