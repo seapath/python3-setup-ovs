@@ -253,6 +253,14 @@ def _create_bridges(config, dpdk_bridges):
                             port_name,
                             "external-ids:" + external_id,
                         ]
+                if "ofport_request" in port:
+                    cmd_args += [
+                        "--",
+                        "set",
+                        "Interface",
+                        port_name,
+                        "ofport_request=" + str(port["ofport_request"]),
+                    ]
                 helpers.run_command(*cmd_args)
                 if "other_config" in port:
                     logging.info(
