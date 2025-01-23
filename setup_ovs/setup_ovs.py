@@ -10,12 +10,13 @@ import yaml
 import pathlib
 import sys
 
-from setup_open_vswitch import helpers
-from setup_open_vswitch import openflow
-from setup_open_vswitch import ovs
-from setup_open_vswitch import check
+import setup_ovs
+from . import helpers
+from . import check
+from . import ovs
+from . import openflow
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Setup OVS bridges and ports")
     parser.add_argument(
         "-v",
@@ -95,7 +96,7 @@ if __name__ == "__main__":
             file_content = fd.read()
             logging.debug("Configuration:\n" + file_content)
             if pathlib.Path(args.file).suffix in (".yaml", ".yml"):
-                config = yaml.load(file_content)
+                config = yaml.safe_load(file_content)
             else:
                 config = json.loads(file_content)
     else:
@@ -116,3 +117,6 @@ if __name__ == "__main__":
             ovs.setup_ovs(config)
         if not args.no_openflow:
             openflow.SetupOpenFlow(config)
+
+if __name__ == "__main__":
+    main()
