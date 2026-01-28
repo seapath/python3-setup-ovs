@@ -71,7 +71,7 @@ class SetupOpenFlow:
         # Table 0
         port_name = port["name"]
         mac = port["mac"]
-        ips = port["ip"] if type(port["ip"]) == list else [port["ip"]]
+        ips = port["ip"] if isinstance(port["ip"], list) else [port["ip"]]
         # Protect against Mac spoofing
         # Only allow packets with the port mac address
         cls.add_flow(
