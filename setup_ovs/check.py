@@ -28,26 +28,26 @@ def configuration_check(config):
     :param config: The configuration which describes the OVS setup
     """
     logging.info("Checking configuration")
-    if type(config) != dict:
+    if not isinstance(config, dict):
         raise SetupOVSConfigException(
             "The configuration should be a dictionary"
         )
     if "bridges" in config:
-        if type(config["bridges"]) != list:
+        if not isinstance(config["bridges"], list):
             raise SetupOVSConfigException(
                 "bridges configuration should be a list"
             )
         for bridge in config["bridges"]:
-            if type(bridge) != dict:
+            if not isinstance(bridge, dict):
                 raise SetupOVSConfigException("A bridge must be a dictionary")
             if "name" not in bridge:
                 raise SetupOVSConfigException("Bridge without name attribute")
             logging.debug("Checking: " + bridge["name"])
             if "ports" in bridge:
-                if type(bridge["ports"]) != list:
+                if not isinstance(bridge["ports"], list):
                     raise SetupOVSConfigException("ports must be a list")
                 for port in bridge["ports"]:
-                    if type(port) != dict:
+                    if not isinstance(port, dict):
                         raise SetupOVSConfigException(
                             "A port must be a dictionary"
                         )
@@ -55,35 +55,35 @@ def configuration_check(config):
             if "other_config" in bridge:
                 attribute_value = (
                     [bridge["other_config"]]
-                    if type(bridge["other_config"]) == str
+                    if isinstance(bridge["other_config"], str)
                     else bridge["other_config"]
                 )
-                if type(attribute_value) != list:
+                if not isinstance(attribute_value, list):
                     raise SetupOVSConfigException(
                         "Bridge {}: other_config must be an string or a "
                         "strings list".format(bridge["name"])
                     )
                 for element in attribute_value:
-                    if type(element) != str:
+                    if not isinstance(element, str):
                         raise SetupOVSConfigException(
                             "Bridge {}: other_config must be an string or a "
                             "strings list".format(bridge["name"])
                         )
             for attribute in ("rstp_enable", "enable_ipv6"):
-                if attribute in bridge and type(bridge[attribute]) != bool:
+                if attribute in bridge and not isinstance(bridge[attribute], bool):
                     raise SetupOVSConfigException(
                         "Bridge {}: {} must be a boolean".format(
                             bridge["name"], attribute
                         )
                     )
     if "unbind_pci_address" in config:
-        if type(config["unbind_pci_address"]) != list:
+        if not isinstance(config["unbind_pci_address"], list):
             raise SetupOVSConfigException(
                 "unbind_pci_address should be a PCI addresses list"
             )
 
         for pci_address in config["unbind_pci_address"]:
-            if type(pci_address) != str:
+            if not isinstance(pci_address, str):
                 raise SetupOVSConfigException("A pci_address must be a string")
             if not helpers.PCI_ADDRESS_MATCHER.match(pci_address):
                 raise SetupOVSConfigException(
@@ -103,7 +103,7 @@ def _attribute_is_a_port(
     :param bridge_name: The attribute bridge name
     :param port_name: The attribute port name
     """
-    if type(attribute_value) != int:
+    if not isinstance(attribute_value, int):
         raise SetupOVSConfigException(
             "Bridge {} Port {}: attribute {} must be an "
             "integer".format(bridge_name, port_name, attribute_name)
@@ -125,7 +125,7 @@ def _attribute_is_an_ipv4(
     :param bridge_name: The attribute bridge name
     :param port_name: The attribute port name
     """
-    if type(attribute_value) != str or not helpers.IPv4_ADDRESS_MATCHER.match(
+    if not isinstance(attribute_value, str) or not helpers.IPv4_ADDRESS_MATCHER.match(
         attribute_value
     ):
         raise SetupOVSConfigException(
@@ -144,7 +144,7 @@ def _attribute_is_a_mac(
     :param bridge_name: The attribute bridge name
     :param port_name: The attribute port name
     """
-    if type(attribute_value) != str or not helpers.MAC_ADDRESS_MATCHER.match(
+    if not isinstance(attribute_value, str) or not helpers.MAC_ADDRESS_MATCHER.match(
         attribute_value
     ):
         raise SetupOVSConfigException(
@@ -283,9 +283,9 @@ def _check_port_configuration(bridge_name, port):
         _attribute_is_a_port("tag", port["tag"], bridge_name, port_name)
     if "trunks" in port:
         trunks = (
-            [port["trunks"]] if type(port["trunks"]) == int else port["trunks"]
+            [port["trunks"]] if isinstance(port["trunks"], int) else port["trunks"]
         )
-        if type(trunks) != list:
+        if not isinstance(trunks, list):
             raise SetupOVSConfigException(
                 "Bridge {} Port {}: attribute trunks must be an integer or"
                 " an integer list".format(bridge_name, port_name)
@@ -308,7 +308,7 @@ def _check_port_configuration(bridge_name, port):
         "ingress_policing_burst",
     ):
         if attribute in port:
-            if type(port[attribute] != int):
+            if not isinstance(port[attribute], int):
                 raise SetupOVSConfigException(
                     "Bridge {} Port {}: attribute {} must be an "
                     "integer".format(bridge_name, port_name, attribute)
@@ -319,7 +319,7 @@ def _check_port_configuration(bridge_name, port):
         )
     for attribute in ("key", "remote_ip", "hook_file"):
         if attribute in port:
-            if type(port[attribute]) != str:
+            if not isinstance(port[attribute], str):
                 raise SetupOVSConfigException(
                     "Bridge {} Port {}: attribute {} must be a "
                     "string".format(bridge_name, port_name, attribute)
@@ -332,17 +332,17 @@ def _check_port_configuration(bridge_name, port):
         if attribute in port:
             attribute_value = (
                 [port[attribute]]
-                if type(port[attribute]) == str
+                if isinstance(port[attribute], str)
                 else port[attribute]
             )
-            if type(attribute_value) != list:
+            if not isinstance(attribute_value, list):
                 raise SetupOVSConfigException(
                     "Bridge {} Port {}: attribute {} must be a string or "
                     "a string list".format(bridge_name, port_name, attribute)
                 )
             for element in attribute_value:
                 if attribute == "other_config":
-                    if type(element) != str:
+                    if not isinstance(element, str):
                         raise SetupOVSConfigException(
                             "Bridge {} Port {}: attribute {} must be a string"
                             " or a string list".format(
