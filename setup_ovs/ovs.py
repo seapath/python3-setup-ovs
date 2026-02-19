@@ -115,15 +115,20 @@ def clear_tap(config):
                 interface,
             )
 
+_DPDK_DEVBIND_CANDIDATES = (
+    "/usr/bin/dpdk-devbind.py",
+    "/usr/sbin/dpdk-devbind",
+)
+
+
 def _bind_dpdk_interfaces(dpdk_interfaces):
     """
     Bind NIC in DPDK
     """
+    dpdk_devbind = helpers.find_command("dpdk-devbind", *_DPDK_DEVBIND_CANDIDATES)
     for nic in dpdk_interfaces:
         logging.info("Attach {} to DPDK".format(nic))
-        helpers.run_command(
-            "/usr/sbin/dpdk-devbind", "--force", "--bind=vfio-pci", nic
-        )
+        helpers.run_command(dpdk_devbind, "--force", "--bind=vfio-pci", nic)
 
 
 def _create_bridges(config, dpdk_bridges):
