@@ -42,6 +42,7 @@ def setup_ovs(config):
             ".",
             "other_config:dpdk-init=true",
         )
+        _bind_dpdk_interfaces(dpdk_interfaces)
     else:
         logging.info("Disable IOMMU vhost")
         helpers.run_command(
@@ -59,7 +60,6 @@ def setup_ovs(config):
             ".",
             "other_config:dpdk-init=false",
         )
-    _bind_dpdk_interfaces(dpdk_interfaces)
     _create_bridges(config["bridges"], dpdk_bridges)
 
     logging.info("Applying configuration: done")
