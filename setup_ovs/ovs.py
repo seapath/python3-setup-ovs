@@ -125,6 +125,9 @@ def _bind_dpdk_interfaces(dpdk_interfaces):
     """
     Bind NIC in DPDK
     """
+    logging.info("Load the vfio-pci kernel module")
+    helpers.run_command("/sbin/modprobe", "vfio-pci")
+
     dpdk_devbind = helpers.find_command("dpdk-devbind", *_DPDK_DEVBIND_CANDIDATES)
     for nic in dpdk_interfaces:
         logging.info("Attach {} to DPDK".format(nic))
