@@ -16,6 +16,13 @@ dependencies = [
     "PyYAML",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "coverage[toml]",
+]
+
 [project.scripts]
 setup_ovs = "setup_ovs.setup_ovs:main"
 
@@ -25,3 +32,17 @@ Homepage = "https://github.com/seapath/python3-setup-ovs"
 [build-system]
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["setup_ovs"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
