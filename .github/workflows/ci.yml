@@ -1,0 +1,152 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+# Validation happens on pull requests: a pull_request run already builds the
+# simulated merge commit, so it checks the merged result and not just the
+# branch tip.
+#
+# main is built too, but only to keep SonarCloud fed. Without an analysis of
+# main there is no reference for the new code comparison on pull requests,
+# and the project dashboard freezes. That run is kept minimal, see the matrix
+# below and the reproducible-build condition.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The whole range on a pull request, where the validation happens.
+        # On main, only the version that produces the coverage report the
+        # Sonar job consumes, so the merge is not revalidated five times.
+        python-version: >-
+          ${{ github.event_name == 'pull_request'
+              && fromJSON('["3.9", "3.10", "3.11", "3.12", "3.13"]')
+              || fromJSON('["3.12"]') }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the package and its test dependencies
+        run: python -m pip install -e ".[test]" -c requirements-ci.txt
+
+      - name: Run the test suite
+        run: python -m pytest --cov=setup_ovs --cov-report=xml --cov-report=term-missing
+
+      # Published in the run summary so the coverage figures are readable and
+      # linkable without any third party service. This is what the OpenSSF
+      # statement and branch coverage criteria are evidenced with.
+      - name: Publish the coverage figures in the run summary
+        if: matrix.python-version == '3.12'
+        run: |
+          echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the coverage report for the Sonar job
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage.xml
+
+  reproducible-build:
+    name: Reproducible build
+    runs-on: ubuntu-latest
+    # Validation only, nothing to feed on main.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install build -c requirements-ci.txt
+
+      # Without SOURCE_DATE_EPOCH setuptools stamps the wheel with the file
+      # mtimes, which differ on every checkout. Pinning it to the commit date
+      # makes the build a pure function of the source tree.
+      # The output directories live outside the work tree on purpose: the
+      # project uses a flat layout, so a build/ directory sitting next to
+      # setup_ovs/ would be picked up as a second top-level package by
+      # setuptools auto-discovery and break the following build.
+      - name: Build the wheel twice and compare
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          export SOURCE_DATE_EPOCH
+          echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
+          python -m build --wheel --outdir "$RUNNER_TEMP/first"
+          python -m build --wheel --outdir "$RUNNER_TEMP/second"
+          first_hash=$(sha256sum "$RUNNER_TEMP"/first/*.whl | cut -d' ' -f1)
+          second_hash=$(sha256sum "$RUNNER_TEMP"/second/*.whl | cut -d' ' -f1)
+          echo "first  $first_hash"
+          echo "second $second_hash"
+          test "$first_hash" = "$second_hash"
+
+  sonar:
+    # Not named "SonarCloud": that is already the name of the code scanning
+    # check SonarCloud pushes through GitHub Advanced Security, and two
+    # identical names make it impossible to tell which one is failing.
+    name: Sonar scanner
+    runs-on: ubuntu-latest
+    needs: test
+    if: ${{ !github.event.pull_request.head.repo.fork }}
+    # Declared at job level so the step below can test it in its `if`.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Sonar needs the full history to assign blame, and therefore to
+          # tell new code from old code.
+          fetch-depth: 0
+
+      - name: Download the coverage report
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage
+
+      - name: Read the project version
+        id: version
+        # The SonarCloud project compares against the previous version to
+        # decide what counts as new code. An analysis that carries no
+        # version leaves the period without a boundary, so it falls back to
+        # the first analysis ever and the whole code base counts as new.
+        # Feeding the scanner the version from pyproject.toml, the single
+        # source of truth, gives the period a real boundary at each release.
+        # tomllib is standard library from python 3.11, and the runner image
+        # ships a newer python than that.
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+          import tomllib
+
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          print("version=" + pyproject["project"]["version"])
+          PY
+
+      # Requires Automatic Analysis to be turned off in the SonarCloud
+      # project settings, otherwise SonarCloud rejects the CI analysis and
+      # fails the build. Skipped while SONAR_TOKEN is unset, which is also
+      # the case for pull requests opened from a fork.
+      - name: Run the scanner
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: -Dsonar.projectVersion=${{ steps.version.outputs.version }}

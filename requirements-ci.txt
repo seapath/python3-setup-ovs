@@ -1,0 +1,13 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+#
+# Pinned toolchain for the CI jobs, so a run is reproducible and does not
+# silently pick up a new release between two builds. Used as a pip
+# constraints file, transitive dependencies are still resolved normally.
+# Every pin below supports Python 3.9 to 3.13.
+
+pytest==8.3.5
+pytest-cov==5.0.0
+coverage==7.6.1
+PyYAML==6.0.2
+build==1.2.2.post1
