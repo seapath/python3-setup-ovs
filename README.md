@@ -26,3 +26,16 @@ A handful of tests are marked `xfail(strict=True)`. Each one documents a bug
 found while writing the suite and pins the current, wrong behaviour: the
 suite fails again the day the bug is fixed, which forces the marker to be
 removed along with the fix. Their `reason` field states the defect.
+
+## Reproducible build
+
+The wheel is byte-for-byte reproducible provided `SOURCE_DATE_EPOCH` is set.
+Without it setuptools stamps the archive with the source file mtimes, which
+differ on every checkout:
+
+```sh
+SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) python -m build --wheel
+```
+
+The `reproducible-build` CI job builds the wheel twice this way and compares
+the SHA-256 of the two archives.
