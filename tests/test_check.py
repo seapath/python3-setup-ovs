@@ -517,12 +517,6 @@ class TestIpAndMac:
 
 
 class TestDuplicateInterfaces:
-    @pytest.mark.xfail(
-        strict=True,
-        reason="dpdk_interfaces/system_interfaces are locals of "
-        "_check_port_configuration, which runs once per port, so the "
-        "duplicate-NIC guard can never fire",
-    )
     def test_rejects_the_same_dpdk_nic_on_two_ports(self, run_command):
         config = {
             "bridges": [
@@ -545,3 +539,64 @@ class TestDuplicateInterfaces:
         }
 
         assert_rejects(config, "already used")
+
+    def test_rejects_the_same_dpdk_nic_on_two_bridges(self, run_command):
+        # A NIC is claimed by a single port anywhere in the configuration,
+        # so the guard spans every bridge and not only the current one.
+        port = {"name": "p0", "type": "dpdk", "interface": "0000:3b:00.0"}
+        config = {
+            "bridges": [
+                {"name": "br0", "ports": [dict(port, name="p0")]},
+                {"name": "br1", "ports": [dict(port, name="p1")]},
+            ]
+        }
+
+        assert_rejects(config, "already used")
+
+    def test_rejects_the_same_system_nic_on_two_ports(
+        self, existing_interfaces
+    ):
+        port = {"name": "p0", "type": "system", "interface": "eth0"}
+        config = {
+            "bridges": [
+                {
+                    "name": "br0",
+                    "ports": [dict(port, name="p0"), dict(port, name="p1")],
+                }
+            ]
+        }
+
+        assert_rejects(config, "already used")
+
+    def test_accepts_distinct_nics(self, run_command, existing_interfaces):
+        check.configuration_check(
+            {
+                "bridges": [
+                    {
+                        "name": "br0",
+                        "ports": [
+                            {
+                                "name": "p0",
+                                "type": "dpdk",
+                                "interface": "0000:3b:00.0",
+                            },
+                            {
+                                "name": "p1",
+                                "type": "dpdk",
+                                "interface": "0000:3b:00.1",
+                            },
+                            {
+                                "name": "p2",
+                                "type": "system",
+                                "interface": "eth0",
+                            },
+                            {
+                                "name": "p3",
+                                "type": "system",
+                                "interface": "eth1",
+                            },
+                        ],
+                    }
+                ]
+            }
+        )
