@@ -177,12 +177,6 @@ class TestRunCommand:
         with pytest.raises(subprocess.CalledProcessError):
             helpers.run_command("/bin/false")
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="run_command returns without running anything when the caller "
-        "passes check explicitly: the subprocess.run call sits inside the "
-        "'if \"check\" not in kargs' branch",
-    )
     def test_explicit_check_still_runs_the_command(self, monkeypatch):
         recorded = {}
         monkeypatch.setattr(
@@ -194,6 +188,19 @@ class TestRunCommand:
         helpers.run_command("/bin/false", check=False)
 
         assert recorded["cmd_args"] == ("/bin/false",)
+        assert recorded["kwargs"]["check"] is False
+
+    def test_explicit_check_still_silences_stdout(self, monkeypatch):
+        recorded = {}
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            lambda a, **k: recorded.update(cmd_args=a, kwargs=k),
+        )
+
+        helpers.run_command("/bin/true", check=False)
+
+        assert recorded["kwargs"]["stdout"] == subprocess.DEVNULL
 
 
 class TestMatchers:

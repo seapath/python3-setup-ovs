@@ -48,13 +48,13 @@ def run_command(*cmd_args, **kargs):
     if not dry_run:
         if "check" not in kargs:
             kargs["check"] = True
-            if (
-                logging.getLogger().getEffectiveLevel() != logging.DEBUG
-                and "stdout" not in kargs
-                and (
-                    "capture_output" not in kargs
-                    or not kargs["capture_output"]
-                )
-            ):
-                kargs["stdout"] = subprocess.DEVNULL
-            return subprocess.run(cmd_args, **kargs)
+        if (
+            logging.getLogger().getEffectiveLevel() != logging.DEBUG
+            and "stdout" not in kargs
+            and (
+                "capture_output" not in kargs
+                or not kargs["capture_output"]
+            )
+        ):
+            kargs["stdout"] = subprocess.DEVNULL
+        return subprocess.run(cmd_args, **kargs)
