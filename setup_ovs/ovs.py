@@ -209,9 +209,13 @@ def _create_bridges(config, dpdk_bridges):
                 if "tag" in port:
                     cmd_args.append("tag={}".format(port["tag"]))
                 if "trunks" in port:
+                    trunks = (
+                        [port["trunks"]]
+                        if isinstance(port["trunks"], int)
+                        else port["trunks"]
+                    )
                     cmd_args.append(
-                        "trunks="
-                        + ",".join([str(tag) for tag in port["trunks"]])
+                        "trunks=" + ",".join([str(tag) for tag in trunks])
                     )
                 if port_type not in ("tap", "system"):
                     cmd_args += [
@@ -241,7 +245,9 @@ def _create_bridges(config, dpdk_bridges):
                     ]
                     if "remote_port" in port:
                         cmd_args.append(
-                            "options:remote_port=" + port["remote_port"]
+                            "options:remote_port={}".format(
+                                port["remote_port"]
+                            )
                         )
 
                 if "external-ids" in port:

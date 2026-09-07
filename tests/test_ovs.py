@@ -192,7 +192,7 @@ class TestCreateBridges:
                     "type": "vxlan",
                     "remote_ip": "10.0.0.1",
                     "key": "42",
-                    "remote_port": "4789",
+                    "remote_port": 4789,
                 }
             )
         )
@@ -205,6 +205,7 @@ class TestCreateBridges:
             ("vlan_mode", "access", "vlan_mode=access"),
             ("tag", 10, "tag=10"),
             ("trunks", [1, 2], "trunks=1,2"),
+            ("trunks", 5, "trunks=5"),
             ("ofport_request", 7, "ofport_request=7"),
         ],
     )
