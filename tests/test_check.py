@@ -165,11 +165,23 @@ class TestPortBasics:
 
     @pytest.mark.parametrize(
         "port_type",
-        ["internal", "tap", "dpdkvhostuserclient", "vxlan"],
+        ["internal", "tap", "dpdkvhostuserclient"],
     )
     def test_accepts_types_needing_no_interface(self, port_type):
         check.configuration_check(
             bridge_with_port({"name": "p0", "type": port_type})
+        )
+
+    def test_accepts_a_complete_vxlan_port(self):
+        check.configuration_check(
+            bridge_with_port(
+                {
+                    "name": "p0",
+                    "type": "vxlan",
+                    "key": "42",
+                    "remote_ip": "10.0.0.1",
+                }
+            )
         )
 
     def test_warns_when_interface_is_ignored(self, caplog):
@@ -321,16 +333,29 @@ class TestVlanAttributes:
 
         assert_rejects(config, "range 0 to")
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="the tag range check is guarded by 'vlan' in port while the "
-        "attribute consumed by ovs._create_bridges is 'tag', so tag is never "
-        "validated",
-    )
-    def test_rejects_out_of_range_tag(self):
-        config = bridge_with_port({"name": "p0", "type": "tap", "tag": 9999})
+    @pytest.mark.parametrize("value", [-1, 4096, 9999])
+    def test_rejects_out_of_range_tag(self, value):
+        config = bridge_with_port({"name": "p0", "type": "tap", "tag": value})
 
-        assert_rejects(config, "range 0 to")
+        assert_rejects(config, "range 0 to 4,095")
+
+    def test_rejects_non_integer_tag(self):
+        config = bridge_with_port({"name": "p0", "type": "tap", "tag": "10"})
+
+        assert_rejects(config, "must be an integer")
+
+    @pytest.mark.parametrize("value", [0, 10, 4095])
+    def test_accepts_in_range_tag(self, value):
+        check.configuration_check(
+            bridge_with_port({"name": "p0", "type": "tap", "tag": value})
+        )
+
+    def test_vlan_without_tag_is_not_a_crash(self):
+        # "vlan" is not consumed by ovs._create_bridges. It used to gate the
+        # tag check and raised KeyError when tag was absent.
+        check.configuration_check(
+            bridge_with_port({"name": "p0", "type": "tap", "vlan": 10})
+        )
 
 
 class TestPolicingAndVxlan:
@@ -367,24 +392,31 @@ class TestPolicingAndVxlan:
 
     def test_rejects_non_integer_remote_port(self):
         config = bridge_with_port(
-            {"name": "p0", "type": "vxlan", "remote_port": "4789"}
+            {
+                "name": "p0",
+                "type": "vxlan",
+                "key": "42",
+                "remote_ip": "10.0.0.1",
+                "remote_port": "4789",
+            }
         )
 
         assert_rejects(config, "must be an integer")
 
-    def test_rejects_negative_remote_port(self):
+    @pytest.mark.parametrize("value", [-1, 65536])
+    def test_rejects_out_of_range_remote_port(self, value):
         config = bridge_with_port(
-            {"name": "p0", "type": "vxlan", "remote_port": -1}
+            {
+                "name": "p0",
+                "type": "vxlan",
+                "key": "42",
+                "remote_ip": "10.0.0.1",
+                "remote_port": value,
+            }
         )
 
-        assert_rejects(config, "range 0 to")
+        assert_rejects(config, "range 0 to 65,535")
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="_attribute_is_a_port enforces the VLAN tag range 0-4095 on "
-        "remote_port too, so the IANA VXLAN port 4789 is refused. A TCP/UDP "
-        "port goes up to 65535",
-    )
     def test_accepts_the_iana_vxlan_port(self):
         check.configuration_check(
             bridge_with_port(
@@ -399,13 +431,20 @@ class TestPolicingAndVxlan:
         )
 
     def test_rejects_non_string_key(self):
-        config = bridge_with_port({"name": "p0", "type": "vxlan", "key": 42})
+        config = bridge_with_port(
+            {
+                "name": "p0",
+                "type": "vxlan",
+                "key": 42,
+                "remote_ip": "10.0.0.1",
+            }
+        )
 
         assert_rejects(config, "must be a string")
 
     def test_rejects_malformed_remote_ip(self):
         config = bridge_with_port(
-            {"name": "p0", "type": "vxlan", "remote_ip": "10.0.0"}
+            {"name": "p0", "type": "vxlan", "key": "42", "remote_ip": "10.0.0"}
         )
 
         assert_rejects(config, "IPv4 address")
@@ -424,17 +463,25 @@ class TestPolicingAndVxlan:
 
         assert_rejects(config, "must be a string")
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="the 'must be set if type is vxlan' branch is unreachable: it "
-        "sits inside 'if attribute in port' and then tests "
-        "'attribute not in port'. ovs._create_bridges later raises KeyError "
-        "on such a config",
-    )
     def test_rejects_vxlan_port_without_key_nor_remote_ip(self):
         config = bridge_with_port({"name": "p0", "type": "vxlan"})
 
-        assert_rejects(config, "vxlan")
+        assert_rejects(config, "must be set if type is vxlan")
+
+    @pytest.mark.parametrize("missing", ["key", "remote_ip"])
+    def test_rejects_vxlan_port_missing_one_attribute(self, missing):
+        port = {
+            "name": "p0",
+            "type": "vxlan",
+            "key": "42",
+            "remote_ip": "10.0.0.1",
+        }
+        del port[missing]
+
+        assert_rejects(
+            bridge_with_port(port),
+            "{} must be set if type is vxlan".format(missing),
+        )
 
 
 class TestIpAndMac:
@@ -517,12 +564,6 @@ class TestIpAndMac:
 
 
 class TestDuplicateInterfaces:
-    @pytest.mark.xfail(
-        strict=True,
-        reason="dpdk_interfaces/system_interfaces are locals of "
-        "_check_port_configuration, which runs once per port, so the "
-        "duplicate-NIC guard can never fire",
-    )
     def test_rejects_the_same_dpdk_nic_on_two_ports(self, run_command):
         config = {
             "bridges": [
@@ -545,3 +586,64 @@ class TestDuplicateInterfaces:
         }
 
         assert_rejects(config, "already used")
+
+    def test_rejects_the_same_dpdk_nic_on_two_bridges(self, run_command):
+        # A NIC is claimed by a single port anywhere in the configuration,
+        # so the guard spans every bridge and not only the current one.
+        port = {"name": "p0", "type": "dpdk", "interface": "0000:3b:00.0"}
+        config = {
+            "bridges": [
+                {"name": "br0", "ports": [dict(port, name="p0")]},
+                {"name": "br1", "ports": [dict(port, name="p1")]},
+            ]
+        }
+
+        assert_rejects(config, "already used")
+
+    def test_rejects_the_same_system_nic_on_two_ports(
+        self, existing_interfaces
+    ):
+        port = {"name": "p0", "type": "system", "interface": "eth0"}
+        config = {
+            "bridges": [
+                {
+                    "name": "br0",
+                    "ports": [dict(port, name="p0"), dict(port, name="p1")],
+                }
+            ]
+        }
+
+        assert_rejects(config, "already used")
+
+    def test_accepts_distinct_nics(self, run_command, existing_interfaces):
+        check.configuration_check(
+            {
+                "bridges": [
+                    {
+                        "name": "br0",
+                        "ports": [
+                            {
+                                "name": "p0",
+                                "type": "dpdk",
+                                "interface": "0000:3b:00.0",
+                            },
+                            {
+                                "name": "p1",
+                                "type": "dpdk",
+                                "interface": "0000:3b:00.1",
+                            },
+                            {
+                                "name": "p2",
+                                "type": "system",
+                                "interface": "eth0",
+                            },
+                            {
+                                "name": "p3",
+                                "type": "system",
+                                "interface": "eth1",
+                            },
+                        ],
+                    }
+                ]
+            }
+        )
