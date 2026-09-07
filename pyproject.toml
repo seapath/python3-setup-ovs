@@ -9,9 +9,10 @@ authors = [
     { name = "Florent Carli", email = "florent.carli@rte-france.com" },
     { name = "Mathieu Dupré", email = "mathieu.dupre@savoirfairelinux.com" }
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 dependencies = [
     "PyYAML",
 ]
@@ -30,7 +31,7 @@ setup_ovs = "setup_ovs.setup_ovs:main"
 Homepage = "https://github.com/seapath/python3-setup-ovs"
 
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
