@@ -32,6 +32,8 @@ def configuration_check(config):
         raise SetupOVSConfigException(
             "The configuration should be a dictionary"
         )
+    dpdk_interfaces = []
+    system_interfaces = []
     if "bridges" in config:
         if not isinstance(config["bridges"], list):
             raise SetupOVSConfigException(
@@ -51,7 +53,12 @@ def configuration_check(config):
                         raise SetupOVSConfigException(
                             "A port must be a dictionary"
                         )
-                    _check_port_configuration(bridge["name"], port)
+                    _check_port_configuration(
+                        bridge["name"],
+                        port,
+                        dpdk_interfaces,
+                        system_interfaces,
+                    )
             if "other_config" in bridge:
                 attribute_value = (
                     [bridge["other_config"]]
@@ -155,15 +162,19 @@ def _attribute_is_a_mac(
         )
 
 
-def _check_port_configuration(bridge_name, port):
+def _check_port_configuration(
+    bridge_name, port, dpdk_interfaces, system_interfaces
+):
     """
     Helper method for _configuration_check which checks the port
     configuration
     :param bridge_name: the bridge name in which the port take from
     :param port: the port configuration
+    :param dpdk_interfaces: the DPDK NICs already claimed by another port,
+                            appended to by this call
+    :param system_interfaces: the system NICs already claimed by another
+                              port, appended to by this call
     """
-    dpdk_interfaces = []
-    system_interfaces = []
     if "name" not in port:
         raise SetupOVSConfigException(
             "Bridge {}: Port without name attribute".format(bridge_name)
