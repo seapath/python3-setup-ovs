@@ -100,6 +100,29 @@ def configuration_check(config):
     logging.info("Configuration check: OK")
 
 
+def _attribute_is_in_range(
+    attribute_name, attribute_value, bridge_name, port_name, maximum
+):
+    """
+    Check if an attribute is an integer between 0 and maximum
+    :param attribute_name: The attribute name
+    :param attribute_value: The attribute value
+    :param bridge_name: The attribute bridge name
+    :param port_name: The attribute port name
+    :param maximum: The highest accepted value, included
+    """
+    if not isinstance(attribute_value, int):
+        raise SetupOVSConfigException(
+            "Bridge {} Port {}: attribute {} must be an "
+            "integer".format(bridge_name, port_name, attribute_name)
+        )
+    if attribute_value < 0 or attribute_value > maximum:
+        raise SetupOVSConfigException(
+            "Bridge {} Port {}: attribute {} must be in range 0 to "
+            "{:,}".format(bridge_name, port_name, attribute_name, maximum)
+        )
+
+
 def _attribute_is_a_port(
     attribute_name, attribute_value, bridge_name, port_name
 ):
@@ -110,16 +133,24 @@ def _attribute_is_a_port(
     :param bridge_name: The attribute bridge name
     :param port_name: The attribute port name
     """
-    if not isinstance(attribute_value, int):
-        raise SetupOVSConfigException(
-            "Bridge {} Port {}: attribute {} must be an "
-            "integer".format(bridge_name, port_name, attribute_name)
-        )
-    if attribute_value < 0 or attribute_value > 4095:
-        raise SetupOVSConfigException(
-            "Bridge {} Port {}: attribute {} must be in range 0 to "
-            "4,095".format(bridge_name, port_name, attribute_name)
-        )
+    _attribute_is_in_range(
+        attribute_name, attribute_value, bridge_name, port_name, 65535
+    )
+
+
+def _attribute_is_a_vlan_tag(
+    attribute_name, attribute_value, bridge_name, port_name
+):
+    """
+    Check if an attribute is a 802.1Q VLAN identifier
+    :param attribute_name: The attribute name
+    :param attribute_value: The attribute value
+    :param bridge_name: The attribute bridge name
+    :param port_name: The attribute port name
+    """
+    _attribute_is_in_range(
+        attribute_name, attribute_value, bridge_name, port_name, 4095
+    )
 
 
 def _attribute_is_an_ipv4(
@@ -275,23 +306,24 @@ def _check_port_configuration(
                 "Bridge {} Port {}: attribute interface is ignored when "
                 " type is not system nor dpdk".format(bridge_name, port_name)
             )
-    for attribute in ("key", "remote_ip", "remote_port"):
-        if attribute in port:
-            if port["type"] == "vxlan":
-                if attribute != "remote_port" and attribute not in port:
-                    raise SetupOVSConfigException(
-                        "Bridge {} Port {}: {} must be set if type is "
-                        "vxlan".format(bridge_name, port_name, attribute)
-                    )
-            else:
+    if port_type == "vxlan":
+        for attribute in ("key", "remote_ip"):
+            if attribute not in port:
+                raise SetupOVSConfigException(
+                    "Bridge {} Port {}: {} must be set if type is "
+                    "vxlan".format(bridge_name, port_name, attribute)
+                )
+    else:
+        for attribute in ("key", "remote_ip", "remote_port"):
+            if attribute in port:
                 logging.warning(
                     "Bridge {} Port {}: attribute {} is ignored"
                     " when type is not vxlan".format(
                         bridge_name, port_name, attribute
                     )
                 )
-    if "vlan" in port:
-        _attribute_is_a_port("tag", port["tag"], bridge_name, port_name)
+    if "tag" in port:
+        _attribute_is_a_vlan_tag("tag", port["tag"], bridge_name, port_name)
     if "trunks" in port:
         trunks = (
             [port["trunks"]] if isinstance(port["trunks"], int) else port["trunks"]
@@ -302,7 +334,7 @@ def _check_port_configuration(
                 " an integer list".format(bridge_name, port_name)
             )
         for trunk in trunks:
-            _attribute_is_a_port("trunks", trunk, bridge_name, port_name)
+            _attribute_is_a_vlan_tag("trunks", trunk, bridge_name, port_name)
     if "vlan_mode" in port and port["vlan_mode"] not in (
         "access",
         "native-tagged",
@@ -378,7 +410,5 @@ def _check_port_configuration(
             raise SetupOVSConfigException(
                 "Bridge {} Port {}: attribute mac only works if"
                 " interface is tap or"
-                " dpdkvhostuserclient".format(
-                    bridge_name, port_name, attribute
-                )
+                " dpdkvhostuserclient".format(bridge_name, port_name)
             )
