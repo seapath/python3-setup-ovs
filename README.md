@@ -22,11 +22,6 @@ pytest --cov=setup_ovs --cov-report=term-missing --cov-report=xml
 Branch coverage is enabled in `pyproject.toml`, so the report covers both
 the statement and the branch criteria.
 
-A handful of tests are marked `xfail(strict=True)`. Each one documents a bug
-found while writing the suite and pins the current, wrong behaviour: the
-suite fails again the day the bug is fixed, which forces the marker to be
-removed along with the fix. Their `reason` field states the defect.
-
 ## Reproducible build
 
 The wheel is byte-for-byte reproducible provided `SOURCE_DATE_EPOCH` is set.
